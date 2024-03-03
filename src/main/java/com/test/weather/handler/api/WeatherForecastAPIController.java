@@ -6,8 +6,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.test.weather.model.enums.Unit;
 import com.test.weather.model.response.WeatherAPIResponse;
 import com.test.weather.service.WeatherForecastService;
 
@@ -28,21 +30,21 @@ public class WeatherForecastAPIController implements WeatherForecastAPI {
     private final WeatherForecastService weatherForecastService;
 
     /**
-     * This function retrieves the weather forecast for a given zip code and returns the forecast along
-     * with additional information in a ResponseEntity.
+     * This Java function retrieves weather forecast data based on a given zip code and unit, handling
+     * exceptions and returning the response with appropriate headers.
      * 
-     * @param zipCode The `zipCode` parameter in the `getWeatherForecast` method is an integer
-     * representing the ZIP code for which you want to retrieve the weather forecast.
-     * @return The method `getWeatherForecast` returns a `ResponseEntity` object containing a
-     * `WeatherAPIResponse` object with weather forecast data, along with HTTP headers and status code.
-     * If the weather forecast retrieval is successful, it returns the forecast data with HTTP status
-     * OK (200). If an exception occurs during the retrieval process, it returns an empty
-     * `WeatherAPIResponse` object with an error message in the
+     * @param zipCode The `zipCode` parameter is an integer representing the postal code for which you
+     * want to retrieve the weather forecast.
+     * @param unit The `unit` parameter in the `getWeatherForecast` method is used to specify the unit
+     * of measurement for the weather data. It is typically used to indicate whether the temperature
+     * should be displayed in Celsius or Fahrenheit, for example.
+     * @return A `ResponseEntity` containing a `WeatherAPIResponse` object, along with headers and an
+     * HTTP status code.
      */
     @Override
-    public ResponseEntity<WeatherAPIResponse> getWeatherForecast(@NonNull int zipCode) {
+    public ResponseEntity<WeatherAPIResponse> getWeatherForecast(int zipCode, @RequestParam Unit unit) {
         try {
-            WeatherAPIResponse response = weatherForecastService.getForecast(Map.of(ZIP_CODE, String.valueOf(zipCode)));
+            WeatherAPIResponse response = weatherForecastService.getForecast(Map.of(ZIP_CODE, String.valueOf(zipCode), UNIT, unit.name()));
             HttpHeaders headers = new HttpHeaders();
             headers.add(IS_CACHED, String.valueOf(response.isCached()));
             return new ResponseEntity<>(response, headers, HttpStatus.OK);

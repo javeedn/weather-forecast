@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.test.weather.model.enums.Unit;
 import com.test.weather.model.response.WeatherAPIResponse;
 
 @RestController
@@ -13,6 +14,6 @@ import com.test.weather.model.response.WeatherAPIResponse;
 public interface WeatherForecastAPI {
 
     @GetMapping("/v1")
-    ResponseEntity<WeatherAPIResponse> getWeatherForecast(@RequestParam int zipCode);
+    ResponseEntity<WeatherAPIResponse> getWeatherForecast(@RequestParam int zipCode, @RequestParam Unit unit);
     
 }

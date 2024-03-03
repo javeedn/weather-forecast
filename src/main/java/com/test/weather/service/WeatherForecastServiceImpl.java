@@ -1,6 +1,7 @@
 package com.test.weather.service;
 
 import static com.test.weather.utility.Constants.ZIP_CODE;
+import static com.test.weather.utility.Constants.UNIT;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.test.weather.model.enums.Unit;
 import com.test.weather.model.response.WeatherAPIResponse;
 import com.test.weather.sao.WeatherApi;
+import com.test.weather.utility.UnitConversion;
 
 import lombok.RequiredArgsConstructor;
 
@@ -53,8 +55,9 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
     public WeatherAPIResponse getForecast(Map<String, String> requestParams) throws JsonProcessingException {
         String zipCode = Optional.ofNullable(requestParams.get(ZIP_CODE))
                           .orElseThrow(() -> new IllegalArgumentException("zipCode is required"));
+        String unit = requestParams.get(UNIT);
 
-        String cacheKey = generateCacheKey(zipCode);
+        String cacheKey = generateCacheKey(zipCode+unit);
 
         Cache.ValueWrapper valueWrapper = cacheManager.getCache(WEATHER_CACHE).get(cacheKey);
         if (valueWrapper != null) {
@@ -66,7 +69,7 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
         String response = apiClient.getWeather(zipCode);
 
         try {
-            WeatherAPIResponse apiResponse = buildResponse(response);
+            WeatherAPIResponse apiResponse = buildResponse(response, unit);
             apiResponse.setNextForecast(List.of((WeatherAPIResponse)apiResponse.clone()));
             cacheManager.getCache(WEATHER_CACHE).put(cacheKey, apiResponse);
             apiResponse.setCached(false);
@@ -92,11 +95,12 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
      * @return An instance of `WeatherAPIResponse` is being returned after parsing the input `response`
      * string and mapping its values to the corresponding fields in the `WeatherAPIResponse` object.
      */
-    private WeatherAPIResponse buildResponse(String response) throws JsonMappingException, JsonProcessingException {
+    private WeatherAPIResponse buildResponse(String response, String unit) throws JsonMappingException, JsonProcessingException {
 
         Map<String, String> responseObject = mapper.readValue(response, new TypeReference<Map<String, String>>() {});
-        
-        return WeatherAPIResponse.builder()
+        Unit responseUnit = Enum.valueOf(Unit.class, responseObject.get("unit").toUpperCase());
+        if(unit.equals(responseUnit.name())) {
+            return WeatherAPIResponse.builder()
                 .currentTemperature(Double.parseDouble(responseObject.get("temperature")))
                 .lowTemperature(Double.parseDouble(responseObject.get("lowTemperature")))
                 .highTemperature(Double.parseDouble(responseObject.get("highTemperature")))
@@ -104,6 +108,35 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
                 .lastUpdated(String.valueOf(LocalDateTime.now()))
                 .isCached(true)
                 .build();
+        } else {
+            if(responseUnit.equals(Unit.FAHRENHEIT)) {
+                double currentTemperatureCelsius = UnitConversion.fahrenheitToCelsius(Double.parseDouble(responseObject.get("temperature")));
+                double lowTemperatureCelsius = UnitConversion.fahrenheitToCelsius(Double.parseDouble(responseObject.get("lowTemperature")));
+                double highTemperatureCelsius = UnitConversion.fahrenheitToCelsius(Double.parseDouble(responseObject.get("highTemperature")));
+                return WeatherAPIResponse.builder()
+                        .currentTemperature(currentTemperatureCelsius)
+                        .lowTemperature(lowTemperatureCelsius)
+                        .highTemperature(highTemperatureCelsius)
+                        .temperatureUnit(Unit.CELSIUS)
+                        .lastUpdated(String.valueOf(LocalDateTime.now()))
+                        .isCached(true)
+                        .build();
+
+            } else {
+                double currentTemperatureFahrenheit = UnitConversion.celsiusToFahrenheit(Double.parseDouble(responseObject.get("temperature")));
+                double lowTemperatureFahrenheit = UnitConversion.celsiusToFahrenheit(Double.parseDouble(responseObject.get("lowTemperature")));
+                double highTemperatureFahrenheit = UnitConversion.celsiusToFahrenheit(Double.parseDouble(responseObject.get("highTemperature")));
+                return WeatherAPIResponse.builder()
+                        .currentTemperature(currentTemperatureFahrenheit)
+                        .lowTemperature(lowTemperatureFahrenheit)
+                        .highTemperature(highTemperatureFahrenheit)
+                        .temperatureUnit(Unit.FAHRENHEIT)
+                        .lastUpdated(String.valueOf(LocalDateTime.now()))
+                        .isCached(true)
+                        .build();
+
+            }
+        }  
     }
     
 }
